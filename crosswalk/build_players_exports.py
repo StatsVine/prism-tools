@@ -21,8 +21,9 @@ def load_fields(core_schema_path, source_schema_path):
 
 def gzip_compress(input_file):
     with open(input_file, 'rb') as f_in:
-        with gzip.open(Path(input_file.parent) / (input_file.name + ".gz"), 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
+        with open(Path(input_file.parent) / (input_file.name + ".gz"), 'wb') as f_out:
+            with gzip.GzipFile(fileobj=f_out, mode='wb', mtime=0) as gz:
+                shutil.copyfileobj(f_in, gz)
 
 def load_csv(filepath):
     with open(filepath, newline='', encoding='utf-8') as f:
