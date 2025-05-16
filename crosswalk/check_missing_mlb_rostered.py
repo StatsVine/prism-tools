@@ -163,7 +163,8 @@ def main(args):
         print(f"⚠️ Missing {len(skeletons)} rostered players")
         if args.issues_file:
             write_issues_txt(skeletons, args.issues_file)
-        sys.exit(1)
+        else:
+            sys.exit(1)
     else:
         print("✅ No missing players from rosters")
 
