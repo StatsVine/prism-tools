@@ -12,6 +12,8 @@ Flake8-pyproject==1.2.3
 identify==2.6.10
 idna==3.10
 isort==6.0.1
+Jinja2==3.1.6
+MarkupSafe==3.0.2
 mccabe==0.7.0
 mypy_extensions==1.1.0
 nodeenv==1.9.1
