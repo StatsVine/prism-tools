@@ -120,7 +120,8 @@ def validate_csv(
             print(f"{len(issues)} changed IDs found")
         if issues_file:
             write_issues_txt(issues, issues_file)
-        sys.exit(1)
+        else:
+            sys.exit(1)
     else:
         print("No redirecting Fangraphs IDs found")
 
