@@ -11,6 +11,7 @@ import requests
 MAPPINGS = {
     # SFBB key : PRISM key
     "IDPLAYER": "sfbb_id",
+    "IDFANGRAPHS": "fangraphs_id",
     "MLBID": "mlbam_id",
     "BREFID": "bbref_id",
     "NFBCID": "nfbc_id",
@@ -20,7 +21,7 @@ MAPPINGS = {
 # TODO externalize these in a yaml config?
 IGNORE_LIST = {
     # PRISM id : PRISM key or list of PRISM keys
-    # 'j03tjl3vvm': ['yahoo_id']
+    "j03tjl3vvm": ["yahoo_id"],  # Randy Vasquez - SFBB yahoo_id is incorrect
 }
 
 
@@ -114,14 +115,21 @@ def validate_csv(
                         our_key in IGNORE_LIST[prism_id]
                         or IGNORE_LIST[prism_id] == our_key
                     ):
-                        print(
-                            f"Row {idx}, {prism_id}: Skipping check of {our_key} for {prism_id}"
-                        )
+                        print(f"Row {idx}, {prism_id}: Ignoring {our_key}")
                         continue
                 sfbb_val = found.get(sfbb_key, None)
                 our_val = row.get(our_key, None)
+
+                if our_key == "fangraphs_id" and our_val != sfbb_val:
+                    # HACK special handling of fangraphs_id differences
+                    if not our_val.startswith("sa") and sfbb_val.startswith("sa"):
+                        # assume our value is correct if sfbb has a sa prefix still and we don't
+                        continue
                 if not our_val and sfbb_val:
                     # present in SFBB, not in PRISM
+                    print(
+                        f"Row {idx}, {prism_id}: Missing {our_key}, SFBB has {sfbb_val}"
+                    )
                     issues.append(
                         {
                             "prism_id": prism_id,
@@ -134,6 +142,10 @@ def validate_csv(
                     )
                 elif sfbb_val and sfbb_val != our_val:
                     # Mismatch
+                    print(
+                        f"Row {idx}, {prism_id}: "
+                        f"Diff {our_key}, SFBB:{sfbb_val}, Prism:{our_val}"
+                    )
                     issues.append(
                         {
                             "prism_id": prism_id,
@@ -153,7 +165,7 @@ def validate_csv(
         else:
             sys.exit(1)
     else:
-        print("No redirecting Fangraphs IDs found")
+        print("No mismatches found")
 
 
 if __name__ == "__main__":
