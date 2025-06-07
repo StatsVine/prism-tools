@@ -125,6 +125,10 @@ def validate_csv(
                     if not our_val.startswith("sa") and sfbb_val.startswith("sa"):
                         # assume our value is correct if sfbb has a sa prefix still and we don't
                         continue
+                if our_key == "bbref_id" and our_val != sfbb_val:
+                    # HACK ignore our missing bbref id, presumably it's a minor league player
+                    if our_val == "" and sfbb_val:
+                        continue
                 if not our_val and sfbb_val:
                     # present in SFBB, not in PRISM
                     print(
