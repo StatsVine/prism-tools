@@ -136,7 +136,8 @@ def validate_csv(
                 if not our_val and sfbb_val:
                     # present in SFBB, not in PRISM
                     print(
-                        f"Row {idx}, {prism_id}: Missing {our_key}, SFBB has {sfbb_val}. Ignoring: {is_ignore_key}"
+                        f"Row {idx}, {prism_id}: Missing {our_key}, SFBB has {sfbb_val}. "
+                        f"Ignoring: {is_ignore_key}"
                     )
                     if not is_ignore_key:
                         issues.append(
@@ -153,7 +154,8 @@ def validate_csv(
                     # Mismatch
                     print(
                         f"Row {idx}, {prism_id}: "
-                        f"Diff {our_key}, SFBB:{sfbb_val}, Prism:{our_val}. Ignoring: {is_ignore_key}"
+                        f"Diff {our_key}, SFBB:{sfbb_val}, Prism:{our_val}. "
+                        f"Ignoring: {is_ignore_key}"
                     )
                     if not is_ignore_key:
                         issues.append(
@@ -196,7 +198,8 @@ if __name__ == "__main__":
         "--ignores-file",
         type=str,
         required=False,
-        help="Path to a YAML file containing a dictionary of player IDs mapped to lists of keys that should be ignored/skipped",
+        help="Path to a YAML file containing a dictionary of player IDs mapped to "
+        "lists of keys that should be ignored/skipped",
     )
     args = parser.parse_args()
     validate_csv(
