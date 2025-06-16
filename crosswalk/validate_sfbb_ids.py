@@ -5,6 +5,7 @@ import sys
 from datetime import datetime
 
 import requests
+import yaml
 
 
 # TODO externalize these in a yaml config?
@@ -16,12 +17,6 @@ MAPPINGS = {
     "BREFID": "bbref_id",
     "NFBCID": "nfbc_id",
     "YAHOOID": "yahoo_id",
-}
-
-# TODO externalize these in a yaml config?
-IGNORE_LIST = {
-    # PRISM id : PRISM key or list of PRISM keys
-    "j03tjl3vvm": ["yahoo_id"],  # Randy Vasquez - SFBB yahoo_id is incorrect
 }
 
 
@@ -84,9 +79,20 @@ def write_issues_txt(issues: list[dict], outfile_path: str = "issues.txt") -> No
 
 
 def validate_csv(
-    csv_path: str, start: int = 1, quiet: bool = False, issues_file: str = None
+    csv_path: str,
+    start: int = 1,
+    quiet: bool = False,
+    issues_file: str = None,
+    ignores_file: str = None,
 ):
     issues = []
+    matches = 0
+    rows = 0
+
+    ignores = {}
+    if ignores_file:
+        with open(ignores_file, "r") as f:
+            ignores = yaml.safe_load(f)
 
     sfbb_data = download_sfbb_data()
     sfbb_by_sfbb_id = {r["IDPLAYER"]: r for r in sfbb_data}
@@ -110,13 +116,11 @@ def validate_csv(
 
             # Check our ID mappings against SFBB's items
             for sfbb_key, our_key in MAPPINGS.items():
-                if IGNORE_LIST.get(prism_id, None):
-                    if (
-                        our_key in IGNORE_LIST[prism_id]
-                        or IGNORE_LIST[prism_id] == our_key
-                    ):
+                is_ignore_key = False
+                if ignores.get(prism_id, None):
+                    if our_key in ignores[prism_id] or ignores[prism_id] == our_key:
                         print(f"Row {idx}, {prism_id}: Ignoring {our_key}")
-                        continue
+                        is_ignore_key = True
                 sfbb_val = found.get(sfbb_key, None)
                 our_val = row.get(our_key, None)
 
@@ -132,38 +136,42 @@ def validate_csv(
                 if not our_val and sfbb_val:
                     # present in SFBB, not in PRISM
                     print(
-                        f"Row {idx}, {prism_id}: Missing {our_key}, SFBB has {sfbb_val}"
+                        f"Row {idx}, {prism_id}: Missing {our_key}, SFBB has {sfbb_val}. Ignoring: {is_ignore_key}"
                     )
-                    issues.append(
-                        {
-                            "prism_id": prism_id,
-                            "last_name": row["last_name"],
-                            "first_name": row["first_name"],
-                            "prism_key": our_key,
-                            "sfbb_value": sfbb_val,
-                            "prism_value": our_val,
-                        }
-                    )
+                    if not is_ignore_key:
+                        issues.append(
+                            {
+                                "prism_id": prism_id,
+                                "last_name": row["last_name"],
+                                "first_name": row["first_name"],
+                                "prism_key": our_key,
+                                "sfbb_value": sfbb_val,
+                                "prism_value": our_val,
+                            }
+                        )
                 elif sfbb_val and sfbb_val != our_val:
                     # Mismatch
                     print(
                         f"Row {idx}, {prism_id}: "
-                        f"Diff {our_key}, SFBB:{sfbb_val}, Prism:{our_val}"
+                        f"Diff {our_key}, SFBB:{sfbb_val}, Prism:{our_val}. Ignoring: {is_ignore_key}"
                     )
-                    issues.append(
-                        {
-                            "prism_id": prism_id,
-                            "last_name": row["last_name"],
-                            "first_name": row["first_name"],
-                            "prism_key": our_key,
-                            "sfbb_value": sfbb_val,
-                            "prism_value": our_val,
-                        }
-                    )
+                    if not is_ignore_key:
+                        issues.append(
+                            {
+                                "prism_id": prism_id,
+                                "last_name": row["last_name"],
+                                "first_name": row["first_name"],
+                                "prism_key": our_key,
+                                "sfbb_value": sfbb_val,
+                                "prism_value": our_val,
+                            }
+                        )
 
     if issues:
         if not quiet:
-            print(f"{len(issues)} differences found")
+            print(
+                f"{len(issues)} differences found. Matched: {matches}, skipped {rows - matches}"
+            )
         if issues_file:
             write_issues_txt(issues, issues_file)
         else:
@@ -184,5 +192,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--issues-file", help="Create an issues file (for creating a GitHub Issue)"
     )
+    parser.add_argument(
+        "--ignores-file",
+        type=str,
+        required=False,
+        help="Path to a YAML file containing a dictionary of player IDs mapped to lists of keys that should be ignored/skipped",
+    )
     args = parser.parse_args()
-    validate_csv(args.csv_path, args.start, args.quiet, args.issues_file)
+    validate_csv(
+        args.csv_path, args.start, args.quiet, args.issues_file, args.ignores_file
+    )
