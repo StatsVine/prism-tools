@@ -101,6 +101,7 @@ def validate_csv(
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for idx, row in enumerate(reader, start=1):
+            rows += 1
             if idx < start:
                 continue
             sfbb_id = row.get("sfbb_id", None)
@@ -113,13 +114,14 @@ def validate_csv(
             if not found:
                 # not in SFBB, skip
                 continue
+            else:
+                matches += 1
 
             # Check our ID mappings against SFBB's items
             for sfbb_key, our_key in MAPPINGS.items():
                 is_ignore_key = False
                 if ignores.get(prism_id, None):
                     if our_key in ignores[prism_id] or ignores[prism_id] == our_key:
-                        print(f"Row {idx}, {prism_id}: Ignoring {our_key}")
                         is_ignore_key = True
                 sfbb_val = found.get(sfbb_key, None)
                 our_val = row.get(our_key, None)
@@ -154,7 +156,7 @@ def validate_csv(
                     # Mismatch
                     print(
                         f"Row {idx}, {prism_id}: "
-                        f"Diff {our_key}, SFBB:{sfbb_val}, Prism:{our_val}. "
+                        f"Diff {our_key}. SFBB: {sfbb_val}, Prism: {our_val}. "
                         f"Ignoring: {is_ignore_key}"
                     )
                     if not is_ignore_key:
@@ -179,7 +181,7 @@ def validate_csv(
         else:
             sys.exit(1)
     else:
-        print("No mismatches found")
+        print(f"No mismatches found. Matched: {matches}, skipped {rows - matches}")
 
 
 if __name__ == "__main__":
