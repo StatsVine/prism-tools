@@ -95,8 +95,8 @@ def validate_csv(
             ignores = yaml.safe_load(f)
 
     sfbb_data = download_sfbb_data()
-    sfbb_by_sfbb_id = {r["IDPLAYER"]: r for r in sfbb_data}
-    sfbb_by_mlb_id = {r["MLBID"]: r for r in sfbb_data}
+    sfbb_by_sfbb_id = {r["IDPLAYER"]: r for r in sfbb_data if len(r["IDPLAYER"]) > 0}
+    sfbb_by_mlb_id = {r["MLBID"]: r for r in sfbb_data if len(r["MLBID"]) > 0}
 
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
