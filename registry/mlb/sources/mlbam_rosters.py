@@ -6,7 +6,7 @@ import time
 import requests
 
 
-CACHE_DIR = "cache/mlb"
+CACHE_DIR = "cache/mlbam_rosters"
 
 TEAM_ID_RANGES = [range(108, 121 + 1), range(133, 147 + 1), range(158, 159)]
 TEAM_IDS = set().union(*TEAM_ID_RANGES)
@@ -46,11 +46,11 @@ def load_team(team_id, refresh=False):
     path = os.path.join(CACHE_DIR, f"{team_id}.json")
 
     if not refresh and os.path.exists(path):
-        print(f"[mlb] Using cached roster for {team_id}")
+        print(f"[mlb_rosters] Using cached roster for {team_id}")
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    print(f"[mlb] Downloading roster for {team_id}")
+    print(f"[mlb_rosters] Downloading roster for {team_id}")
     url = SOURCE_URL_TEMPLATE.format(team_id=team_id)
     response = requests.get(url)
     response.raise_for_status()
