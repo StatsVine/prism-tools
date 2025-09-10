@@ -24,6 +24,6 @@ pre_commit==4.2.0
 pycodestyle==2.13.0
 pyflakes==3.3.2
 PyYAML==6.0.2
-requests==2.32.3
+requests==2.32.4
 urllib3==2.5.0
 virtualenv==20.31.2
