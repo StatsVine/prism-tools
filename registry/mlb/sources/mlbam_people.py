@@ -8,7 +8,12 @@ import requests
 
 CACHE_DIR = "cache/mlbam_people"
 
-SPORT_ID_RANGES = [range(1, 1 + 1), range(11, 14 + 1), range(16, 16 + 1)]
+SPORT_ID_RANGES = [
+    range(1, 1 + 1),
+    range(11, 14 + 1),
+    range(16, 16 + 1),
+    range(22, 22 + 1),
+]
 SPORT_IDS = set().union(*SPORT_ID_RANGES)
 
 SOURCE_URL_TEMPLATE = "https://statsapi.mlb.com/api/v1/sports/{sport_id}/players"
