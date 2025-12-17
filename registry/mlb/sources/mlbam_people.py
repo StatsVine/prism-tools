@@ -12,7 +12,6 @@ SPORT_ID_RANGES = [
     range(1, 1 + 1),
     range(11, 14 + 1),
     range(16, 16 + 1),
-    range(22, 22 + 1),
 ]
 SPORT_IDS = set().union(*SPORT_ID_RANGES)
 
@@ -80,12 +79,15 @@ def load(refresh=False):
             player_id = person["id"]
             team_id = person.get("currentTeam", {}).get("id", None)
             parent_team_id = None
-            if team_id:
-                team = teams_by_id[team_id]
+            if team_id and team_id in teams_by_id:
+                team = teams_by_id.get(team_id, None)
                 person["team"] = team
                 parent_team_id = team.get("parentOrgId", None)
                 if parent_team_id:
                     person["parentTeam"] = parent_teams_by_id[parent_team_id]
+            else:
+                print(f"Missing team id {team_id} for {player_id}")
+
             if player_id:
                 all_players[str(player_id)] = person
 
