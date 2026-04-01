@@ -24,8 +24,10 @@ def check_redirect(fg_id: str) -> str | None:
         if 300 <= response.status_code < 400:
             location = response.headers.get("Location", "")
             if "/players/" in location and fg_id not in location:
-                new_id = location.split("/")[-2]
-                return new_id
+                parts = location.split("/")
+                filtered = [p for p in parts if p.isdigit()]
+                if filtered and len(filtered) == 1:
+                    return filtered[0]
     except requests.RequestException as e:
         print(f"Error checking {fg_id}: {e}", file=sys.stderr)
     return None
