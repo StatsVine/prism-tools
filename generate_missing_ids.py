@@ -1,6 +1,7 @@
 import csv
 import hashlib
 from base64 import b32encode
+from typing import List
 
 
 # Our Base32 uses a custom alphabet: we sanitize standard base32
@@ -34,8 +35,8 @@ def generate_id(prefix: str, row: dict, fields: list[str], digest_bytes: int) ->
 
 def process_csv(
     file_path: str,
-    id_field="prism_id",
-    id_fields=["player_name", "birth_year"],
+    id_field: str,
+    id_fields: List[str],
     digest_bytes: int = 6,
     prefix: str = None,
     force: bool = False,

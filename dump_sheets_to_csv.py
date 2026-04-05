@@ -26,7 +26,8 @@ def download_csv(sheet_id: str, gid: str):
         f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
     )
     response = requests.get(url)
-    # Force UTF-8 encoding, requests defaults to ISO-8859-1 if no charset is included (as per RFC 2616)
+    # Force UTF-8 encoding, requests defaults to ISO-8859-1 if no charset is included
+    # (correct as per RFC 2616)
     response.encoding = "utf-8"
     if not response.ok:
         print(f"Failed to fetch CSV. Status code: {response.status_code}")

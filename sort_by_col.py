@@ -2,7 +2,7 @@ import argparse
 import csv
 
 
-def sort_csv_by_prism_id(
+def sort_csv_by_col(
     input_path,
     field: str,
     output_path=None,
@@ -30,4 +30,4 @@ if __name__ == "__main__":
     parser.add_argument("--output", help="Optional path for sorted output file.")
     args = parser.parse_args()
 
-    sort_csv_by_prism_id(args.input, args.field, args.output)
+    sort_csv_by_col(args.input, args.field, args.output)
