@@ -12,6 +12,7 @@ compare the item's QID to the wikidata_id we already store.
 
 import argparse
 import csv
+import io
 import sys
 from datetime import datetime
 
@@ -27,69 +28,73 @@ USER_AGENT = "prism-crosswalk-validator/0.1 (https://github.com/statsvine/prism-
 # Our column holding the QID. Same name in every league.
 WIKIDATA_FIELD = "wikidata_id"
 
-# WDQS rejects very large queries, so ask in batches of this many ids.
-BATCH_SIZE = 200
 
-
-def pfr_to_wikidata(pfr_id: str) -> str:
+def wikidata_to_pfr(value: str) -> str:
     """
     P3561 stores the Pro-Football-Reference path, not the bare id: MahoPa00 is
     held as "M/MahoPa00". The directory is the uppercased first letter of the
     id, including for the lowercase kicker/punter ids (gouldrob01 -> G/...).
     """
-    return f"{pfr_id[0].upper()}/{pfr_id}"
-
-
-def wikidata_to_pfr(value: str) -> str:
     return value.rsplit("/", 1)[-1]
 
 
-# league : { wikidata property : (our field, to_wikidata, from_wikidata) }
-# Properties are tried in order, so list the highest-coverage join first.
+# league : { wikidata property : (our field, from_wikidata) }
+# from_wikidata converts an upstream value into our format, or None if the two
+# already agree. Properties are tried in order, so list the highest-coverage
+# join first.
 LEAGUES = {
     "nfl": {
-        "P3561": ("pfr_id", pfr_to_wikidata, wikidata_to_pfr),
-        "P3686": ("espn_id", None, None),
+        "P3561": ("pfr_id", wikidata_to_pfr),
+        "P3686": ("espn_id", None),
     },
     "mlb": {
         # Untested against a live CSV -- data/mlb/players.csv has no
         # wikidata_id column yet, so every matched row reports as missing.
-        "P3541": ("mlbam_id", None, None),
+        "P3541": ("mlbam_id", None),
     },
 }
 
 
 def query_wdqs(query: str) -> list[dict]:
+    """Ask WDQS for CSV rather than JSON -- it parses straight into dicts."""
     response = requests.post(
         WDQS_URL,
         data={"query": query},
-        headers={
-            "Accept": "application/sparql-results+json",
-            "User-Agent": USER_AGENT,
-        },
+        headers={"Accept": "text/csv", "User-Agent": USER_AGENT},
         timeout=120,
     )
     if not response.ok:
         print(f"WDQS query failed. Status code: {response.status_code}")
         response.raise_for_status()
-    return response.json()["results"]["bindings"]
+    return list(csv.DictReader(io.StringIO(response.text)))
 
 
-def lookup_property(prop: str, values: list[str]) -> dict:
-    """Map each id we asked about to the QID that claims it."""
-    found = {}
-    for start in range(0, len(values), BATCH_SIZE):
-        batch = values[start : start + BATCH_SIZE]
-        literals = " ".join(f'"{v}"' for v in batch)
-        query = (
-            f"SELECT ?item ?value WHERE {{ "
-            f"VALUES ?value {{ {literals} }} "
-            f"?item wdt:{prop} ?value . }}"
-        )
-        for binding in query_wdqs(query):
-            qid = binding["item"]["value"].rsplit("/", 1)[-1]
-            found[binding["value"]["value"]] = qid
-    return found
+def fetch_property_maps(properties: dict) -> dict:
+    """
+    Pull every item carrying any of our join properties, in a single query.
+
+    Wikidata answers this for a whole league in about a second, so there is no
+    reason to ask id-by-id: the cost is fixed no matter how many rows we hold.
+    Returns { property : { our-format id : QID } }.
+    """
+    props = " ".join(f"wdt:{prop}" for prop in properties)
+    query = (
+        f"SELECT ?item ?prop ?value WHERE {{ "
+        f"VALUES ?prop {{ {props} }} "
+        f"?item ?prop ?value . }}"
+    )
+
+    maps = {prop: {} for prop in properties}
+    for row in query_wdqs(query):
+        prop = row["prop"].rsplit("/", 1)[-1]
+        if prop not in maps:
+            continue
+        _, from_wikidata = properties[prop]
+        value = row["value"]
+        # Re-key by our own id so callers never deal with Wikidata formatting.
+        key = from_wikidata(value) if from_wikidata else value
+        maps[prop][key] = row["item"].rsplit("/", 1)[-1]
+    return maps
 
 
 def write_issues_txt(issues: list[dict], outfile_path: str = "issues.txt") -> None:
@@ -129,21 +134,12 @@ def write_issues_txt(issues: list[dict], outfile_path: str = "issues.txt") -> No
 
 
 def build_lookups(rows: list[dict], properties: dict) -> dict:
-    """Ask Wikidata about every id we hold, one join property at a time."""
-    lookups = {}
-    for prop, (our_field, to_wikidata, from_wikidata) in properties.items():
-        ours = sorted({row[our_field] for row in rows if row.get(our_field)})
-        if not ours:
-            print(f"No {our_field} values to look up, skipping {prop}")
-            lookups[prop] = {}
-            continue
-        asked = [to_wikidata(v) if to_wikidata else v for v in ours]
-        found = lookup_property(prop, asked)
-        # Re-key by our own id so callers never deal with Wikidata formatting.
-        lookups[prop] = {
-            (from_wikidata(k) if from_wikidata else k): qid for k, qid in found.items()
-        }
-        print(f"{prop} ({our_field}): matched {len(lookups[prop])} of {len(ours)} ids")
+    """Fetch the Wikidata side, then report how much of ours it covers."""
+    lookups = fetch_property_maps(properties)
+    for prop, (our_field, _) in properties.items():
+        ours = {row[our_field] for row in rows if row.get(our_field)}
+        hits = sum(1 for value in ours if value in lookups[prop])
+        print(f"{prop} ({our_field}): matched {hits} of {len(ours)} ids")
     return lookups
 
 
@@ -185,7 +181,7 @@ def validate_csv(
 
         wikidata_val = None
         matched_on = None
-        for prop, (our_field, _, _) in properties.items():
+        for prop, (our_field, _) in properties.items():
             our_id = row.get(our_field, None)
             if our_id:
                 wikidata_val = lookups[prop].get(our_id, None)
