@@ -1,8 +1,8 @@
-"""MLB entry point for the shared players-registry builder.
+"""NFL entry point for the shared players-registry builder.
 
 Kept as a per-league script so consumers keep invoking
-`tools/registry/mlb/build_players_registry.py` by path. The engine lives in
-`registry/players_registry.py`; this file only supplies the MLB default
+`tools/registry/nfl/build_players_registry.py` by path. The engine lives in
+`registry/players_registry.py`; this file only supplies the NFL default
 registry file and the `sources/` directory that source modules load from.
 """
 
@@ -17,6 +17,6 @@ from players_registry import main  # noqa: E402
 
 if __name__ == "__main__":
     main(
-        default_registry_file="schema/leagues/mlb/players.yaml",
+        default_registry_file="schema/leagues/nfl/players.yaml",
         source_dir=Path(__file__).resolve().parent,
     )
