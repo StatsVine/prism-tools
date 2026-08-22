@@ -156,7 +156,39 @@ def validate_csv(
                 if found:
                     break
             if not found:
-                # not in Sleeper, skip
+                # Nothing joined. If we hold a sleeper_id anyway, it is a bad
+                # one -- Sleeper owns that namespace and the snapshot carries
+                # every player it has ever issued an id for, retired included.
+                # (When some other key does join, the mapping loop below reports
+                # the same defect and names the correct id, so this only fires
+                # where that cannot happen.)
+                our_sleeper_id = clean(row.get("sleeper_id", ""))
+                if (
+                    our_sleeper_id
+                    and our_sleeper_id not in sleeper_by_key["sleeper_id"]
+                ):
+                    is_ignore_key = False
+                    if ignores.get(prism_id, None):
+                        if (
+                            "sleeper_id" in ignores[prism_id]
+                            or ignores[prism_id] == "sleeper_id"
+                        ):
+                            is_ignore_key = True
+                    print(
+                        f"Row {idx}, {prism_id}: Unknown sleeper_id {our_sleeper_id}, "
+                        f"no such player in Sleeper. Ignoring: {is_ignore_key}"
+                    )
+                    if not is_ignore_key:
+                        issues.append(
+                            {
+                                "prism_id": prism_id,
+                                "last_name": row["last_name"],
+                                "first_name": row["first_name"],
+                                "prism_key": "sleeper_id",
+                                "sleeper_value": "_not found_",
+                                "prism_value": our_sleeper_id,
+                            }
+                        )
                 continue
             else:
                 matches += 1
