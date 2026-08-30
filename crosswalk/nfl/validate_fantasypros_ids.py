@@ -329,7 +329,12 @@ def validate_csv(
                 f"Matched: {matches}, skipped {rows - matches}"
             )
         if issues_file:
+            # The workflow reads this file and opens a GitHub issue from it, so
+            # writing one is a successful run -- exiting non-zero here fails the
+            # step and the issue never gets filed. Same convention as
+            # validate_sleeper_ids.py and validate_nflverse_ids.py.
             write_issues_txt(issues, issues_file)
+            return 0
         return 1
 
     print(f"No mismatches found. Matched: {matches}, skipped {rows - matches}")
