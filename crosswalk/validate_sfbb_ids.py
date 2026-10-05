@@ -19,6 +19,9 @@ MAPPINGS = {
     "YAHOOID": "yahoo_id",
 }
 
+# SFBB values that mean "no id"
+MISSING_SENTINELS = {"0"}
+
 
 def sfbb_url(
     sheet_id: str = "1JgczhD5VDQ1EiXqVG-blttZcVwbZd5_Ne_mefUGwJnk", gid: str = 0
@@ -124,6 +127,9 @@ def validate_csv(
                     if our_key in ignores[prism_id] or ignores[prism_id] == our_key:
                         is_ignore_key = True
                 sfbb_val = found.get(sfbb_key, None)
+                if sfbb_val in MISSING_SENTINELS:
+                    # SFBB uses placeholders (e.g. YAHOOID "0") for missing ids
+                    sfbb_val = ""
                 our_val = row.get(our_key, None)
 
                 if our_key == "fangraphs_id" and our_val != sfbb_val:
